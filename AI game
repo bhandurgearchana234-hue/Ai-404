@@ -1,0 +1,266 @@
+import tkinter as tk
+from tkinter import messagebox
+import random
+
+# ---------------- SETTINGS ----------------
+
+SIZE = 5
+MAX_MOVES = 15
+
+player_row, player_col = 0, 0
+ai_row, ai_col = 4, 0
+
+goal_row = random.randint(2, 4)
+goal_col = random.randint(2, 4)
+
+obstacles = [(1, 2), (2, 1), (3, 3)]
+
+player_score = 100
+ai_score = 100
+
+moves_left = MAX_MOVES
+
+player_path = [(player_row, player_col)]
+ai_path = [(ai_row, ai_col)]
+
+game_over = False
+
+# ---------------- WINDOW ----------------
+
+root = tk.Tk()
+root.title("AI vs Player Treasure Hunt")
+root.geometry("700x750")
+root.configure(bg="#e6f2ff")
+
+# ---------------- AI MOVE ----------------
+
+def distance(r, c):
+    return abs(r - goal_row) + abs(c - goal_col)
+
+def ai_move():
+    global ai_row, ai_col, ai_score
+
+    if game_over:
+        return
+
+    moves = [
+        (ai_row - 1, ai_col),
+        (ai_row + 1, ai_col),
+        (ai_row, ai_col - 1),
+        (ai_row, ai_col + 1)
+    ]
+
+    valid = []
+
+    for r, c in moves:
+
+        if 0 <= r < SIZE and 0 <= c < SIZE:
+
+            if (r, c) not in obstacles:
+
+                valid.append(
+                    (distance(r, c), r, c)
+                )
+
+    if valid:
+
+        valid.sort()
+
+        _, r, c = valid[0]
+
+        ai_row = r
+        ai_col = c
+
+        ai_path.append((r, c))
+        ai_score -= 5
+
+# ---------------- UPDATE GRID ----------------
+
+def update_grid():
+
+    for i in range(SIZE):
+        for j in range(SIZE):
+
+            grid[i][j]["text"] = ""
+            grid[i][j]["bg"] = "white"
+
+    for r, c in obstacles:
+        grid[r][c]["text"] = "🌳"
+        grid[r][c]["bg"] = "lightgreen"
+
+    grid[goal_row][goal_col]["text"] = "💎"
+    grid[goal_row][goal_col]["bg"] = "gold"
+
+    grid[player_row][player_col]["text"] = "🧑"
+    grid[player_row][player_col]["bg"] = "skyblue"
+
+    grid[ai_row][ai_col]["text"] = "🤖"
+    grid[ai_row][ai_col]["bg"] = "tomato"
+
+    score_label.config(
+        text=f"Player Score: {player_score}   AI Score: {ai_score}   Moves Left: {moves_left}"
+    )
+
+# ---------------- WIN CHECK ----------------
+
+def check_winner():
+    global game_over
+
+    if (player_row, player_col) == (goal_row, goal_col):
+
+        game_over = True
+
+        messagebox.showinfo(
+            "Winner",
+            f"🏆 PLAYER WINS!\nScore = {player_score}"
+        )
+
+        root.destroy()
+
+    elif (ai_row, ai_col) == (goal_row, goal_col):
+
+        game_over = True
+
+        messagebox.showinfo(
+            "Winner",
+            f"🤖 AI WINS!\nScore = {ai_score}"
+        )
+
+        root.destroy()
+
+    elif moves_left <= 0:
+
+        game_over = True
+
+        messagebox.showinfo(
+            "Game Over",
+            "No Moves Left!"
+        )
+
+        root.destroy()
+
+# ---------------- PLAYER MOVE ----------------
+
+def move_player(r, c):
+
+    global player_row
+    global player_col
+    global player_score
+    global moves_left
+
+    if game_over:
+        return
+
+    nr = player_row + r
+    nc = player_col + c
+
+    if not (0 <= nr < SIZE and 0 <= nc < SIZE):
+        return
+
+    if (nr, nc) in obstacles:
+        return
+
+    player_row = nr
+    player_col = nc
+
+    player_path.append((nr, nc))
+
+    player_score -= 5
+    moves_left -= 1
+
+    # AI takes turn
+    ai_move()
+
+    update_grid()
+    check_winner()
+
+# ---------------- TITLE ----------------
+
+tk.Label(
+    root,
+    text="🏴‍☠️ AI vs PLAYER TREASURE HUNT 🏴‍☠️",
+    font=("Arial", 20, "bold"),
+    bg="#e6f2ff"
+).pack(pady=10)
+
+tk.Label(
+    root,
+    text="AI Algorithm: Best First Search",
+    font=("Arial", 12),
+    bg="#e6f2ff"
+).pack()
+
+score_label = tk.Label(
+    root,
+    text="",
+    font=("Arial", 12, "bold"),
+    bg="#e6f2ff"
+)
+
+score_label.pack(pady=10)
+
+# ---------------- GRID ----------------
+
+frame = tk.Frame(root)
+frame.pack()
+
+grid = []
+
+for i in range(SIZE):
+
+    row = []
+
+    for j in range(SIZE):
+
+        lbl = tk.Label(
+            frame,
+            width=6,
+            height=3,
+            relief="ridge",
+            font=("Arial", 12, "bold")
+        )
+
+        lbl.grid(row=i, column=j)
+
+        row.append(lbl)
+
+    grid.append(row)
+
+# ---------------- BUTTONS ----------------
+
+btn_frame = tk.Frame(root, bg="#e6f2ff")
+btn_frame.pack(pady=20)
+
+tk.Button(
+    btn_frame,
+    text="⬆ UP",
+    width=12,
+    command=lambda: move_player(-1, 0)
+).grid(row=0, column=1)
+
+tk.Button(
+    btn_frame,
+    text="⬅ LEFT",
+    width=12,
+    command=lambda: move_player(0, -1)
+).grid(row=1, column=0)
+
+tk.Button(
+    btn_frame,
+    text="➡ RIGHT",
+    width=12,
+    command=lambda: move_player(0, 1)
+).grid(row=1, column=2)
+
+tk.Button(
+    btn_frame,
+    text="⬇ DOWN",
+    width=12,
+    command=lambda: move_player(1, 0)
+).grid(row=2, column=1)
+
+# ---------------- START ----------------
+
+update_grid()
+
+root.mainloop()
